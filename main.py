@@ -13,7 +13,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# налаштування
+# Налаштування додатку
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
@@ -24,22 +24,23 @@ jwt = JWTManager(app)
 redis = Redis(host='localhost', port=6379, db=0)
 
 
-# моделі
+# Моделі бази даних
+
 class User(db.Model):
-    """Модель пользователя с именем и захешированным паролем."""
+    """Модель користувача з іменем та захешованим паролем."""
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
 
 
 class BuySellConditionsSchema(Schema):
-    """Схема для валидации условий покупки и продажи."""
+    """Схема для валідації умов покупки та продажу."""
     indicator = fields.Str(required=True)
     threshold = fields.Float(required=True)
 
 
 class StrategySchema(Schema):
-    """Схема для валидации стратегии торговли."""
+    """Схема для валідації стратегії торгівлі."""
     name = fields.Str(required=True)
     description = fields.Str(required=True)
     asset_type = fields.Str(required=True)
@@ -49,7 +50,7 @@ class StrategySchema(Schema):
 
 
 class Strategy(db.Model):
-    """Модель стратегии торговли с условиями покупки и продажи."""
+    """Модель стратегії торгівлі з умовами покупки та продажу."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(200), nullable=False)
@@ -61,9 +62,9 @@ class Strategy(db.Model):
     user = db.relationship('User', backref=db.backref('strategies', lazy=True))
 
 
-# Функции для RabbitMQ
+# Функції для роботи з RabbitMQ
 def send_message_to_rabbitmq(message):
-    """Отправляет сообщение в RabbitMQ."""
+    """Відправляє повідомлення в RabbitMQ."""
     connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
     channel.queue_declare(queue='strategy_updates')
@@ -71,10 +72,10 @@ def send_message_to_rabbitmq(message):
     connection.close()
 
 
-# Роут для регистрации пользователя
+# Роут для реєстрації користувача
 @app.route('/auth/register', methods=['POST'])
 def register():
-    """Регистрация нового пользователя с паролем."""
+    """Реєстрація нового користувача з паролем."""
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
@@ -82,12 +83,12 @@ def register():
     if not username or not password:
         return jsonify(message="Username and password are required"), 400
 
-    # Проверка на существующего пользователя
+    # Перевірка на наявність користувача
     existing_user = User.query.filter_by(username=username).first()
     if existing_user:
         return jsonify(message="Username already exists"), 400
 
-    # Хеширование пароля
+    # Хешування пароля
     hashed_password = generate_password_hash(password)
 
     new_user = User(username=username, password=hashed_password)
@@ -99,7 +100,7 @@ def register():
 
 @app.route('/auth/login', methods=['POST'])
 def login():
-    """Авторизация пользователя и получение JWT токена."""
+    """Авторизація користувача та отримання JWT токена."""
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
@@ -116,14 +117,14 @@ def login():
         return jsonify(message="Invalid credentials"), 401
 
 
-# Роут для создания стратегии
+# Роут для створення стратегії
 @app.route('/strategies', methods=['POST'])
 @jwt_required()
 def create_strategy():
-    """Создание новой стратегии торговли."""
+    """Створення нової стратегії торгівлі."""
     data = request.get_json()
 
-    # Валидация данных
+    # Валідація даних
     try:
         validated_data = StrategySchema().load(data)
     except ValidationError as err:
@@ -142,16 +143,16 @@ def create_strategy():
         buy_conditions=validated_data['buy_conditions'],
         sell_conditions=validated_data['sell_conditions'],
         status=validated_data['status'],
-        user_id=user.id  # Назначаем стратегию пользователю
+        user_id=user.id  # Призначаємо стратегію користувачу
     )
     db.session.add(new_strategy)
     db.session.commit()
 
-    # Отправить сообщение в RabbitMQ
+    # Відправка повідомлення в RabbitMQ
     message = json.dumps({"message": f"User {user.username} created strategy {new_strategy.name}"})
     send_message_to_rabbitmq(message)
 
-    # Обновить кэш в Redis
+    # Оновлення кешу в Redis
     redis.delete(f"user_strategies:{user.id}")
 
     return jsonify(message="Strategy created successfully"), 201
@@ -160,14 +161,14 @@ def create_strategy():
 @app.route('/strategies', methods=['GET'])
 @jwt_required()
 def get_strategies():
-    """Получение всех стратегий текущего пользователя."""
+    """Отримання всіх стратегій поточного користувача."""
     username = get_jwt_identity()
     user = User.query.filter_by(username=username).first()
 
     if not user:
         return jsonify(message="User not found"), 404
 
-    # Проверяем наличие кэша в Redis
+    # Перевірка наявності кешу в Redis
     cached_strategies = redis.get(f"user_strategies:{user.id}")
     if cached_strategies:
         return jsonify(json.loads(cached_strategies)), 200
@@ -186,8 +187,8 @@ def get_strategies():
             'status': strategy.status
         })
 
-    # Кэшируем стратегии в Redis
-    redis.set(f"user_strategies:{user.id}", json.dumps(result), ex=60 * 60)  # Кэш на 1 час
+    # Кешування стратегій в Redis
+    redis.set(f"user_strategies:{user.id}", json.dumps(result), ex=60 * 60)  # Кеш на 1 годину
 
     return jsonify(result), 200
 
@@ -195,7 +196,7 @@ def get_strategies():
 @app.route('/strategies/<int:id>', methods=['PUT'])
 @jwt_required()
 def update_strategy(id):
-    """Обновление стратегии по ее ID."""
+    """Оновлення стратегії за її ID."""
     strategy = Strategy.query.filter_by(id=id).first()
 
     if strategy is None:
@@ -223,7 +224,7 @@ def update_strategy(id):
 
     db.session.commit()
 
-    # Отправка сообщения в RabbitMQ
+    # Відправка повідомлення в RabbitMQ
     message = json.dumps({"message": f"User {user.username} updated strategy {strategy.name}"})
     send_message_to_rabbitmq(message)
 
@@ -235,7 +236,7 @@ def update_strategy(id):
 @app.route('/strategies/<int:id>', methods=['DELETE'])
 @jwt_required()
 def delete_strategy(id):
-    """Удаление стратегии по ее ID."""
+    """Видалення стратегії за її ID."""
     strategy = Strategy.query.filter_by(id=id).first()
 
     if strategy is None:
@@ -258,28 +259,28 @@ def delete_strategy(id):
     return jsonify(message="Strategy deleted successfully"), 200
 
 
-# Роут для симуляции стратегии
+# Роут для симуляції стратегії
 @app.route('/strategies/<int:id>/simulate', methods=['POST'])
 @jwt_required()
 def simulate_strategy(id):
-    """Симуляция стратегии на основе исторических данных."""
+    """Симуляція стратегії на основі історичних даних."""
     data = request.get_json()
 
     if not data or not isinstance(data, list):
         return jsonify(message="Historical data is required"), 400
 
-    # Получение стратегии
+    # Отримання стратегії
     strategy = Strategy.query.filter_by(id=id).first()
     if not strategy:
         return jsonify(message="Strategy not found"), 404
 
-    # Проверка прав доступа
+    # Перевірка прав доступу
     username = get_jwt_identity()
     user = User.query.filter_by(username=username).first()
     if not user or strategy.user_id != user.id:
         return jsonify(message="You can only simulate your own strategies"), 403
 
-    # Начальные параметры
+    # Початкові параметри
     total_trades = 0
     profit_loss = 0.0
     win_trades = 0
@@ -288,47 +289,47 @@ def simulate_strategy(id):
     balance = initial_balance
     highest_balance = initial_balance
 
-    # Логика симуляции
+    # Логіка симуляції
     for day in data:
         try:
             date = day['date']
             close_price = day['close']
-            volume = day.get('volume', 1)  # По умолчанию объем = 1
+            volume = day.get('volume', 1)  # За замовчуванням об'єм = 1
         except KeyError:
             print(f"Skipping day due to missing data: {day}", flush=True)
             continue
 
-        # Логика покупки
+        # Логіка покупки
         buy_signal = False
         if strategy.buy_conditions['indicator'] == "momentum" and close_price > strategy.buy_conditions['threshold']:
             buy_signal = True
 
-        # Логика продажи
+        # Логіка продажу
         sell_signal = False
         if strategy.sell_conditions['indicator'] == "momentum" and close_price < strategy.sell_conditions['threshold']:
             sell_signal = True
 
-        # Если сработал сигнал на покупку
+        # Якщо спрацював сигнал на покупку
         if buy_signal:
             total_trades += 1
-            balance -= close_price * volume  # Покупаем по цене закрытия с учетом объема
+            balance -= close_price * volume  # Купуємо по ціні закриття з урахуванням об'єму
             print(f"Buy on {date}: close={close_price}, volume={volume}, balance={balance}", flush=True)
 
-        # Если сработал сигнал на продажу
+        # Якщо спрацював сигнал на продаж
         if sell_signal:
             total_trades += 1
-            balance += close_price * volume  # Продаем по цене закрытия с учетом объема
+            balance += close_price * volume  # Продаємо по ціні закриття з урахуванням об'єму
             win_trades += 1
             print(f"Sell on {date}: close={close_price}, volume={volume}, balance={balance}", flush=True)
 
-        # Расчет максимальной просадки
+        # Розрахунок максимальної просадки
         if balance > highest_balance:
             highest_balance = balance
         drawdown = (highest_balance - balance) / highest_balance * 100
         if drawdown > max_drawdown:
             max_drawdown = drawdown
 
-    # Итоги симуляции
+    # Результати симуляції
     profit_loss = balance - initial_balance
     win_rate = (win_trades / total_trades) * 100 if total_trades > 0 else 0
 
@@ -343,9 +344,9 @@ def simulate_strategy(id):
     return jsonify(result), 200
 
 
-# Функция для создания таблиц в базе данных
+# Функція для створення таблиць у базі даних
 def create_tables():
-    """Создает все таблицы в базе данных на основе моделей."""
+    """Створює всі таблиці в базі даних на основі моделей."""
     with app.app_context():
         db.create_all()
 
