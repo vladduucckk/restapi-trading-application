@@ -1,13 +1,14 @@
+import os
+import json
+
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from redis import Redis
 import pika
-import json
 from marshmallow import Schema, fields, ValidationError
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
