@@ -268,48 +268,79 @@ def simulate_strategy(id):
     if not data or not isinstance(data, list):
         return jsonify(message="Historical data is required"), 400
 
+    # Получение стратегии
     strategy = Strategy.query.filter_by(id=id).first()
     if not strategy:
         return jsonify(message="Strategy not found"), 404
 
+    # Проверка прав доступа
     username = get_jwt_identity()
     user = User.query.filter_by(username=username).first()
-
     if not user or strategy.user_id != user.id:
         return jsonify(message="You can only simulate your own strategies"), 403
 
+    # Начальные параметры
     total_trades = 0
-    profit_loss = 0
-    win_rate = 0
-    max_drawdown = 0
-    initial_balance = 10000
+    profit_loss = 0.0
+    win_trades = 0
+    max_drawdown = 0.0
+    initial_balance = 10000.0
+    balance = initial_balance
+    highest_balance = initial_balance
 
+    # Логика симуляции
     for day in data:
-        close_price = day['close']
-        buy_signal = strategy.buy_conditions['indicator'] in day
-        sell_signal = strategy.sell_conditions['indicator'] in day
+        try:
+            date = day['date']
+            close_price = day['close']
+            volume = day.get('volume', 1)  # По умолчанию объем = 1
+        except KeyError:
+            print(f"Skipping day due to missing data: {day}", flush=True)
+            continue
 
-        if buy_signal and close_price > strategy.buy_conditions['threshold']:
+        # Логика покупки
+        buy_signal = False
+        if strategy.buy_conditions['indicator'] == "momentum" and close_price > strategy.buy_conditions['threshold']:
+            buy_signal = True
+
+        # Логика продажи
+        sell_signal = False
+        if strategy.sell_conditions['indicator'] == "momentum" and close_price < strategy.sell_conditions['threshold']:
+            sell_signal = True
+
+        # Если сработал сигнал на покупку
+        if buy_signal:
             total_trades += 1
-            profit_loss += close_price
+            balance -= close_price * volume  # Покупаем по цене закрытия с учетом объема
+            print(f"Buy on {date}: close={close_price}, volume={volume}, balance={balance}", flush=True)
 
-        if sell_signal and close_price < strategy.sell_conditions['threshold']:
+        # Если сработал сигнал на продажу
+        if sell_signal:
             total_trades += 1
-            profit_loss -= close_price
+            balance += close_price * volume  # Продаем по цене закрытия с учетом объема
+            win_trades += 1
+            print(f"Sell on {date}: close={close_price}, volume={volume}, balance={balance}", flush=True)
 
-    win_rate = (total_trades / len(data)) * 100 if total_trades > 0 else 0
-    max_drawdown = -2.5  # Пример значения для максимальной просадки
+        # Расчет максимальной просадки
+        if balance > highest_balance:
+            highest_balance = balance
+        drawdown = (highest_balance - balance) / highest_balance * 100
+        if drawdown > max_drawdown:
+            max_drawdown = drawdown
+
+    # Итоги симуляции
+    profit_loss = balance - initial_balance
+    win_rate = (win_trades / total_trades) * 100 if total_trades > 0 else 0
 
     result = {
         "strategy_id": id,
         "total_trades": total_trades,
-        "profit_loss": profit_loss,
-        "win_rate": win_rate,
-        "max_drawdown": max_drawdown
+        "profit_loss": round(profit_loss, 2),
+        "win_rate": round(win_rate, 2),
+        "max_drawdown": round(max_drawdown, 2)
     }
 
     return jsonify(result), 200
-
 
 # Функция для создания таблиц в базе данных
 def create_tables():
