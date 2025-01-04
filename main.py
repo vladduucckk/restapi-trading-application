@@ -342,6 +342,7 @@ def simulate_strategy(id):
 
     return jsonify(result), 200
 
+
 # Функция для создания таблиц в базе данных
 def create_tables():
     """Создает все таблицы в базе данных на основе моделей."""
