@@ -1,36 +1,51 @@
-from flask import jsonify
-
 from app.models import Strategy
 
 
 class SimulationService:
     @staticmethod
-    def simulate_strategy(id, data, user):
+    def simulate_strategy(id, data, user_id):
         strategy = Strategy.query.filter_by(id=id).first()
-        if not strategy or strategy.user_id != user.id:
-            return jsonify(message="You can only simulate your own strategies"), 403
 
-        total_trades, profit_loss, win_trades, max_drawdown = 0, 0.0, 0, 0.0
-        initial_balance, balance, highest_balance = 10000.0, 10000.0, 10000.0
+        if not strategy:
+            return {"message": "Strategy not found"}, 404
+
+        if strategy.user_id != user_id:
+            return {"message": "You can only simulate your own strategies"}, 403
+
+        # Логіка симуляції
+        total_trades = 0
+        profit_loss = 0.0
+        win_trades = 0
+        max_drawdown = 0.0
+        initial_balance = 10000.0
+        balance = initial_balance
+        highest_balance = initial_balance
 
         for day in data:
-            date, close_price, volume = day['date'], day['close'], day.get('volume', 1)
+            try:
+                date = day['date']
+                close_price = day['close']
+                volume = day.get('volume', 1)  # За замовчуванням об'єм = 1
+            except KeyError:
+                continue
 
-            buy_signal = strategy.buy_conditions['indicator'] == "momentum" and close_price > strategy.buy_conditions['threshold']
-            sell_signal = strategy.sell_conditions['indicator'] == "momentum" and close_price < strategy.sell_conditions['threshold']
+            buy_signal = close_price > strategy.buy_conditions['threshold']
+            sell_signal = close_price < strategy.sell_conditions['threshold']
 
+            # Логіка покупки
             if buy_signal:
                 total_trades += 1
                 balance -= close_price * volume
 
+            # Логіка продажу
             if sell_signal:
                 total_trades += 1
                 balance += close_price * volume
                 win_trades += 1
 
+            # Розрахунок максимальної просадки
             if balance > highest_balance:
                 highest_balance = balance
-
             drawdown = (highest_balance - balance) / highest_balance * 100
             if drawdown > max_drawdown:
                 max_drawdown = drawdown
@@ -46,4 +61,4 @@ class SimulationService:
             "max_drawdown": round(max_drawdown, 2)
         }
 
-        return jsonify(result), 200
+        return result, 200

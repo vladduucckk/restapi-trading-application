@@ -11,5 +11,15 @@ def get_cached_strategies(user_id):
     return None
 
 def cache_strategies(user_id, strategies):
-    """Кешування стратегій Redis."""
-    redis.set(f"user_strategies:{user_id}", json.dumps(strategies), ex=60 * 60)  # Кеш на 1 час
+    # Assuming strategies is a list of Strategy objects or dictionaries
+    strategies_data = [{
+        'id': strategy.id,
+        'name': strategy.name,
+        'description': strategy.description,
+        'asset_type': strategy.asset_type,
+        'buy_conditions': strategy.buy_conditions,
+        'sell_conditions': strategy.sell_conditions,
+        'status': strategy.status
+    } for strategy in strategies]
+
+    redis.set(f"user_strategies:{user_id}", json.dumps(strategies_data), ex=60 * 60)
