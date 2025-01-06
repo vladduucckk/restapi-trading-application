@@ -5,8 +5,8 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - DATABASE_URI=postgresql://postgres:exaple@db:5432/trading_db
-      - JWT_SECRET_KEY=yourjwtsecret_kay
+      - DATABASE_URI=postgresql://postgres:yourpass@db:5432/strategies_db
+      - JWT_SECRET_KEY=yourjwtkey
     depends_on:
       - db
       - redis
@@ -19,7 +19,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=example
-      - POSTGRES_DB=trading_db
+      - POSTGRES_DB=strategies_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
