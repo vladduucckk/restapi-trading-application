@@ -110,7 +110,10 @@ class StrategyService:
         db.session.delete(strategy)
         db.session.commit()
 
+        # Fetch updated strategies to pass to cache_strategies
+        strategies = Strategy.query.filter_by(user_id=user.id).all()
+
         # Оновлення кешу
-        cache_strategies(user.id)
+        cache_strategies(user.id, strategies)
 
         return {"message": "Strategy deleted successfully"}, 200
