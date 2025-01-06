@@ -3,6 +3,7 @@ import json
 
 redis = Redis(host='localhost', port=6379, db=0)
 
+
 def get_cached_strategies(user_id):
     """Отримання стратегій з кешу Redis."""
     cached_strategies = redis.get(f"user_strategies:{user_id}")
@@ -10,8 +11,8 @@ def get_cached_strategies(user_id):
         return json.loads(cached_strategies)
     return None
 
+
 def cache_strategies(user_id, strategies):
-    # Assuming strategies is a list of Strategy objects or dictionaries
     strategies_data = [{
         'id': strategy.id,
         'name': strategy.name,

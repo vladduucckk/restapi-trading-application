@@ -31,7 +31,6 @@ class StrategyService:
         db.session.add(new_strategy)
         db.session.commit()
 
-        # Get all strategies to pass to cache_strategies
         strategies = Strategy.query.filter_by(user_id=user.id).all()
 
         # Оновлення кешу
@@ -78,7 +77,6 @@ class StrategyService:
         except ValidationError as err:
             return err.messages, 400
 
-        # Update strategy fields
         strategy.name = validated_data['name']
         strategy.description = validated_data['description']
         strategy.asset_type = validated_data['asset_type']
@@ -88,7 +86,6 @@ class StrategyService:
 
         db.session.commit()
 
-        # Fetch updated strategies to pass to cache_strategies
         strategies = Strategy.query.filter_by(user_id=user.id).all()
 
         # Оновлення кешу
@@ -110,7 +107,6 @@ class StrategyService:
         db.session.delete(strategy)
         db.session.commit()
 
-        # Fetch updated strategies to pass to cache_strategies
         strategies = Strategy.query.filter_by(user_id=user.id).all()
 
         # Оновлення кешу

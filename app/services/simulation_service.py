@@ -1,5 +1,6 @@
 from app.models import Strategy
 
+
 class SimulationService:
     @staticmethod
     def simulate_strategy(id, data, user_id):
@@ -28,7 +29,8 @@ class SimulationService:
                 date = day['date']
                 close_price = day['close']
                 volume = day.get('volume', 1)  # Якщо об'єм не вказано, за замовчуванням 1
-                print(f"Processing day: {date}, Close: {close_price}, Volume: {volume}")  # Лог для перевірки кожного дня
+                print(
+                    f"Processing day: {date}, Close: {close_price}, Volume: {volume}")  # Лог для перевірки кожного дня
             except KeyError as e:
                 print(f"Skipping day due to missing data: {day}, error: {e}")  # Лог для відлову помилок в даних
                 continue

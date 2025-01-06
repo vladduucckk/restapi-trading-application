@@ -13,10 +13,12 @@ def register():
     data = request.get_json()
     return jsonify(*AuthService.register(data))
 
+
 @app.route('/auth/login', methods=['POST'])
 def login():
     data = request.get_json()
     return jsonify(*AuthService.login(data))
+
 
 @app.route('/strategies', methods=['POST'])
 @jwt_required()
@@ -26,12 +28,14 @@ def create_strategy():
     response, status_code = StrategyService.create_strategy(data, username)
     return jsonify(response), status_code
 
+
 @app.route('/strategies', methods=['GET'])
 @jwt_required()
 def get_strategies():
     username = get_jwt_identity()
     user = User.query.filter_by(username=username).first()
     return jsonify(*StrategyService.get_strategies(user.id))
+
 
 @app.route('/strategies/<int:id>', methods=['PUT'])
 @jwt_required()
@@ -40,11 +44,13 @@ def update_strategy(id):
     username = get_jwt_identity()
     return jsonify(*StrategyService.update_strategy(id, data, username))
 
+
 @app.route('/strategies/<int:id>', methods=['DELETE'])
 @jwt_required()
 def delete_strategy(id):
     username = get_jwt_identity()
     return jsonify(*StrategyService.delete_strategy(id, username))
+
 
 @app.route('/strategies/<int:id>/simulate', methods=['POST'])
 @jwt_required()

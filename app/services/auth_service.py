@@ -4,6 +4,7 @@ from flask_jwt_extended import create_access_token
 from app import db
 from app.models import User
 
+
 class AuthService:
     @staticmethod
     def register(data):
