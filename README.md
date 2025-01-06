@@ -228,6 +228,12 @@ JWT_SECRET_KEY=your_jwt_secret_key
 pip install -r requirements.txt
 ```
 
+5. Can you create a database named strategies_db
+
+```postgres terminal
+CREATE DATABASE strategies_db;
+```
+
 ### Running the Application
 
 1. Start the database and message queue (RabbitMQ and Redis) if not using Docker.
