@@ -78,6 +78,7 @@ class StrategyService:
         except ValidationError as err:
             return err.messages, 400
 
+        # Update strategy fields
         strategy.name = validated_data['name']
         strategy.description = validated_data['description']
         strategy.asset_type = validated_data['asset_type']
@@ -87,8 +88,11 @@ class StrategyService:
 
         db.session.commit()
 
+        # Fetch updated strategies to pass to cache_strategies
+        strategies = Strategy.query.filter_by(user_id=user.id).all()
+
         # Оновлення кешу
-        cache_strategies(user.id)
+        cache_strategies(user.id, strategies)
 
         return {"message": "Strategy updated successfully"}, 200
 
